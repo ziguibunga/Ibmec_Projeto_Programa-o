@@ -82,7 +82,6 @@ def estatistica_privados():
     variancia_aprb = statistics.variance(aprbs)
     aprb.close()
 
-    global privado
     privado = {
         "VALE29": [media_vale,dp_vale,cv_vale,variancia_vale],
         "ELET22": [media_elet,dp_elet,cv_elet,variancia_elet],
@@ -90,7 +89,6 @@ def estatistica_privados():
         "PETR45": [media_petr,dp_petr,cv_petr,variancia_petr],
         "APRB28": [media_aprb,dp_aprb,cv_aprb,variancia_aprb]
     }
-    global cv_privado
     cv_privado = {
         "VALE29": cv_vale,
         "ELET22": cv_elet,
@@ -163,7 +161,6 @@ def estatistica_publicos():
     variancia_prefixado_com_juros = statistics.variance(prefixados_com_juros)
     prefixado_com_juros.close()
 
-    global publicos
     publicos = {
         "IPCA+": [media_ipca,dp_ipca,cv_ipca,variancia_ipca],
         "tesouro IGPM": [media_igpm,dp_igpm,cv_igpm,variancia_igpm],
@@ -171,7 +168,6 @@ def estatistica_publicos():
         "tesouro selic": [media_selic,dp_selic,cv_selic,variancia_selic],
         "tesouro prefixado com juros": [media_selic,dp_prefixado_com_juros,cv_prefixado_com_juros,variancia_prefixado_com_juros],
     }
-    global cv_publicos
     cv_publicos = {
         "IPCA+":cv_ipca,
         "tesouro IGPM": cv_igpm,
@@ -182,31 +178,27 @@ def estatistica_publicos():
     return publicos,cv_publicos
 
 # Montando as carteiras com os menores coeficientes de variação
-def analise_cv():
+def analise_cv(cv_privado,cv_publicos):
     # ordenando os ativos privados em ordem crescente
-    global coef_variacao_privados_ordenados
     coef_variacao_privados_ordenados = []
     for ativo, cv in sorted(cv_privado.items(), key = itemgetter(1)):
         v = "{}".format(ativo,cv)
         coef_variacao_privados_ordenados.append(v)
     print(f"Os dois títulos privados escolhidos para a carteira foram {coef_variacao_privados_ordenados[0]} e {coef_variacao_privados_ordenados[1]}")
-    global carteira_privada
     carteira_privada = [coef_variacao_privados_ordenados[0],coef_variacao_privados_ordenados[1]]
 
     # ordenando os ativos públicos em ordem crescente
-    global coef_variacao_publicos_ordenados
     coef_variacao_publicos_ordenados = []
     for ativo, cv in sorted(cv_publicos.items(), key = itemgetter(1)):
         v = "{}".format(ativo,cv)
         coef_variacao_publicos_ordenados.append(v)
     print(f"Os dois títulos públicos escolhidos para a carteira foram {coef_variacao_publicos_ordenados[0]} e {coef_variacao_publicos_ordenados[1]}")
-    global carteira_publica
     carteira_publica = [coef_variacao_publicos_ordenados[0],coef_variacao_publicos_ordenados[1]]
+    return coef_variacao_privados_ordenados,carteira_privada,coef_variacao_publicos_ordenados,carteira_publica
 
 # Calculando o índice de Sharpe dos ativos privados
-def indice_de_Sharpe_privados():
+def indice_de_Sharpe_privados(privado,carteira_privada,coef_variacao_privados_ordenados):
     # Agrupando as médias dos melhores ativos privados em uma só lista
-    global media_top2_privados
     media_top2_privados = []
     for i in carteira_privada:
         media_top2_privados.append((privado[i])[0])
@@ -250,15 +242,14 @@ def indice_de_Sharpe_privados():
             break
    
     max_sharpe = max(sharpe)
-    global melhor_peso_privado
     melhor_peso_privado = (sharpe.index(max_sharpe))   
 
     print(f"\nPara a carteira privada, a melhor divisão do dinheiro é:\n- {melhor_peso_privado/2}% no ativo {coef_variacao_privados_ordenados[1]}\n- {(100-melhor_peso_privado)/2}% no ativo {coef_variacao_privados_ordenados[0]}")
+    return media_top2_privados,melhor_peso_privado
 
 # Calculando o índice de Sharpe dos ativos públicos    
-def indice_de_Sharpe_publicos():
+def indice_de_Sharpe_publicos(publicos,carteira_publica,coef_variacao_publicos_ordenados):
     # Agrupando as médias dos melhores ativos públicos em uma só lista
-    global media_top2_publicos
     media_top2_publicos = []
     for i in carteira_publica:
         media_top2_publicos.append((publicos[i])[0])
@@ -302,13 +293,13 @@ def indice_de_Sharpe_publicos():
             break
     
     max_sharpe = max(sharpe)
-    global melhor_peso_publico
     melhor_peso_publico = (sharpe.index(max_sharpe))
 
     print(f"Para a carteira pública, a melhor divisão do dinheiro é:\n- {melhor_peso_publico/2}% no ativo {coef_variacao_publicos_ordenados[0]}\n- {(100-melhor_peso_publico)/2}% no ativo {coef_variacao_publicos_ordenados[1]}")
+    return media_top2_publicos,melhor_peso_publico
 
 # Cálculo dos retorno esperados
-def retorno_esperado():
+def retorno_esperado(media_top2_privados,melhor_peso_privado,media_top2_publicos,melhor_peso_publico):
 
     # media retorno privados
     retorno_ativo1_privados = (media_top2_privados[0]*((100-melhor_peso_privado)/200))*valor
@@ -369,7 +360,7 @@ def grafico_publicos():
     plt.show()
 
 # Comparação dos ativos da carteira com os índices de mercado
-def grafico_carteira():
+def grafico_carteira(coef_variacao_privados_ordenados,coef_variacao_publicos_ordenados):
     plt.plot(bsas, 'k-', color='blue',label= coef_variacao_privados_ordenados[0])
 
     plt.plot(elets, 'k-', color='green',label=coef_variacao_privados_ordenados[1])
@@ -410,14 +401,15 @@ def main():
         except ValueError:
             print("Digite apenas caracteres numéricos")
     print("."*100)
-    estatistica_privados()
-    estatistica_publicos()
-    analise_cv()
-    indice_de_Sharpe_privados()
-    indice_de_Sharpe_publicos()
-    retorno_esperado()
+    pri, cv_pri = estatistica_privados()
+    publ, cv_publ = estatistica_publicos()
+    cart_pri,coef_vari_pri_ord,cart_pu,coef_vari_publ_ord =  analise_cv(cv_pri,cv_publ)
+    med_top2_pri,melh_pes_pri = indice_de_Sharpe_privados(pri,cart_pri,coef_vari_pri_ord)
+    med_top2_publ,melh_pes_publ = indice_de_Sharpe_publicos(publ,cart_pu,coef_vari_publ_ord)
+    retorno_esperado(med_top2_pri,melh_pes_pri,med_top2_publ,melh_pes_publ)
     grafico_privados()
     grafico_publicos()
-    grafico_carteira()
+    grafico_carteira(coef_vari_pri_ord,coef_vari_publ_ord)
 
-main()
+if __name__ == '__main__':
+    main()
